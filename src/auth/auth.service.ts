@@ -1,88 +1,87 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Auth } from './entity/auth.entity';
-import { User } from 'src/users/entity/users.entity';
+import { Auth } from 'typeorm';
+
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { AuthRepository } from './repository/auth.repository';
+import { UserRepository } from 'src/users/repository/user.repository';
+import { AuthMessages } from './constants/messages';
 
 @Injectable()
 export class AuthService {
+  async validateUser(email: string, password: string): Promise<Auth | null> {
+    const user = await this.authRepo.findOne({
+      where: { email },
+    });
+    if (!user) return null;
 
-   async validateUser(email: string, password: string) : Promise<any> {
-      const user =await  this.authRepo.findOne({
-        where: { email},
-      });
-      if(!user) return null;
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return null;
 
-      const isPasswordValid =  bcrypt.compare(password, user.password);
-      if(!isPasswordValid) return null; 
-      
-      return user;
-    }
- constructor(
-    @InjectRepository(Auth) 
-    private authRepo: Repository<Auth>,
-    @InjectRepository(User) 
-    private userRepo: Repository<User>,
+    return user;
+  }
+  constructor(
+    private readonly authRepo: AuthRepository,
+    private readonly userRepo: UserRepository,
     private jwtService: JwtService,
   ) {}
   // check
-    async register(dto: RegisterDto) {
-            const existingUser = await this.userRepo.findOneBy ({email : dto.email})
-            if(existingUser){
-                throw new Error('User already exists');
-            }
-
-       const user = this.userRepo.create({fullname : dto.fullname, email : dto.email});
-         await this.userRepo.save(user);
-
-         const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-         const auth = this.authRepo.create({
-            email : dto.email,
-            password : hashedPassword,
-            role : dto.role || 'user',
-            user : user
-           
-         });
-          console.log('Hashed Password:', hashedPassword);
-         await this.authRepo.save(auth);
-        return { message: 'Register successful', email: user.email, fullname: user.fullname };
-        
-    }
-    //
-    async login(dto: LoginDto) {
-    const auth = await this.authRepo.findOne({
-        where: { email: dto.email },
-        relations: ['user'],
-      });
-      if (!auth) {
-        throw new Error('Invalid credentials');
-      }
-
-      const isPasswordValid = await bcrypt.compare(dto.password, auth.password);
-      if (!isPasswordValid) {
-        throw new Error('Invalid credentials');
-      }
-      const payload = { sub: auth.id, email: auth.email, role: auth.role };
-      
-             const refreshToken = this.jwtService.sign({sub: auth.id}, {
-            secret: process.env.JWT_REFRESH_SECRET || 'defaultRefreshSecretKey',
-            expiresIn: '1d' });
-
-
-      const accessToken = this.jwtService.sign(payload, {
-        secret: process.env.JWT_SECRET || 'defaultSecretKey',
-        expiresIn: '1h' });
-
-        console.log('Access Token:', accessToken);
-        console.log('Refresh Token:', refreshToken);
-      return { accessToken, refreshToken };
-            
+  async register(dto: RegisterDto) {
+    const existsEmail = await this.authRepo.findByEmail(dto.email);
+    if (existsEmail) {
+      throw new ConflictException(AuthMessages.EMAIL_SHOULD_NOT_BE_EMPTY);
     }
 
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
 
+    const auth = await this.authRepo.createAuth(dto, hashedPassword);
+    // auth.email = dto.email;
+    // auth.password = hashedPassword;
+    // auth.fullname = dto.fullname;
+
+    const saveAuth = await this.authRepo.save(auth);
+
+    const user = await this.userRepo.createUser();
+    user.auth = saveAuth;
+    await this.userRepo.save(user);
+    return {
+      auth,
+      user,
+    };
+  }
+  //
+  async login(dto: LoginDto) {
+    const auth = await this.authRepo.findByEmail(dto.email);
+    if (!auth) {
+      throw new NotFoundException(AuthMessages.INVALID_CREDENTIALS);
+    }
+
+    const isPasswordValid = await bcrypt.compare(dto.password, auth.password);
+    if (!isPasswordValid) {
+      throw new NotFoundException(AuthMessages.INVALID_CREDENTIALS);
+    }
+    const payload = { sub: auth.id, email: auth.email, role: auth.role };
+
+    const refreshToken = this.jwtService.sign(
+      { sub: auth.id },
+      {
+        secret: process.env.JWT_REFRESH_SECRET,
+        expiresIn: process.env.JWT_REFRESH_EXPIRES,
+      },
+    );
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: process.env.JWT_ACCESS_EXPIRES,
+    });
+    console.log(payload);
+
+    return { accessToken, refreshToken };
+  }
 }

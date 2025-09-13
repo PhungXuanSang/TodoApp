@@ -1,88 +1,78 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Todo } from './entity/todo.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { TodoDto } from './dto/todo.dto';
-import { use } from 'passport';
+import { TodoRepository } from './repository/todo.repository';
+import { UserRepository } from 'src/users/repository/user.repository';
+import { TodoMessages } from './constants/todos.messages';
 
 @Injectable()
 export class TodosService {
-    constructor(
-        @InjectRepository(Todo)
-        private todoRepository: Repository<Todo>,
-    ) { }
+  constructor(
+    private readonly todoRepo: TodoRepository,
+    private readonly userRepo: UserRepository,
+  ) {}
 
-    async createTodo(todoDto: TodoDto, userId: number): Promise<Todo> {
-        const user = await this.todoRepository.findOneBy({ id: userId });
-        if (!user) {
-            throw new Error('User not found');
-        }
-        const todo = this.todoRepository.create({ ...todoDto, user, isDeleted: false });
-        console.log(`requested userId: ${userId}`);
-        return this.todoRepository.save(todo);
+  async createTodo(todoDto: TodoDto, userId: number): Promise<Todo> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException(TodoMessages.USER_NOT_FOUND);
     }
-    async findAll(): Promise<Todo[]> {
+    return this.todoRepo.createTodo(todoDto, user);
+  }
+  // admin + user
+  async findAllNotDelete(): Promise<Todo[]> {
+    return await this.todoRepo.findAllNotDelete();
+  }
+  // admin
+  async findAll(): Promise<Todo[]> {
+    return await this.todoRepo.findAll();
+  }
 
-        return this.todoRepository.find({
-            where: {
-                isDeleted: false,
-                
-            },
-
-        });
+  // async findAllByUserId(userId: number): Promise<Todo[]> {
+  //   return this.todoRepository.find({
+  //     where: {
+  //       user: { id: userId },
+  //       isDeleted: false,
+  //     },
+  //     // relations : ['user']
+  //   });
+  // }
+  // admin+ user
+  async findOneById(id: number): Promise<Todo | null> {
+    return this.todoRepo.findOneBy({ id });
+  }
+  async update(id: number, todoDto: TodoDto, userId: number): Promise<Todo> {
+    const todo = await this.todoRepo.findOne({
+      where: { id, isDeleted: false },
+      relations: ['user'],
+    });
+    if (!todo) {
+      throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
     }
-    async findAllByUserId(
-        userId: number
-
-
-    ): Promise<Todo[]> {
-        return this.todoRepository.find({
-            where: {
-                user: { id: userId },
-                isDeleted: false
-            },
-            // relations : ['user']
-        });
+    if (todo.user.id !== userId) {
+      throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED_TO_UPDATE);
     }
-    async findOne(id: number): Promise<Todo | null> {
-        return this.todoRepository.findOneBy({ id });
+    return await this.todoRepo.updateTodo(todo, todoDto);
+  }
+  async remove(id: number, userId: number): Promise<void> {
+    const todo = await this.todoRepo.findOne({
+      where: { id, isDeleted: false },
+      relations: ['user'],
+    });
+    if (!todo) {
+      throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
     }
-    async update(id: number, todoDto: TodoDto, userId: number): Promise<Todo | null> {
-        const todo = await this.todoRepository.findOne({
-            where: { id, isDeleted: false },
-            relations: ['user']
-        });
-        if (!todo) {
-            throw new BadRequestException('Todo not found');
-        }
-        if (todo.user.id !== userId) {
-            throw new Error('You are not authorized to update this todo');
-        }
-
-        // Object.assign(todo, todoDto);
-        // return this.todoRepository.save(todo);
-
-        await this.todoRepository.update(id, todoDto);
-        return this.findOne(id);
+    if (todo.isDeleted) {
+      throw new NotFoundException(TodoMessages.TODO_ALREADY_DELETED);
     }
-    async remove(id: number, userId: number): Promise<void> {
-        const todo = await this.todoRepository.findOne({
-            where: { id, isDeleted: false },
-            relations: ['user']
-
-        })
-        if (!todo) {
-            throw new Error('Todo not found');
-        }
-        if (todo.isDeleted) {
-            throw new Error('Todo already deleted');
-        }
-        if (todo.user.id !== userId) {
-            throw new Error('You are not authorized to delete this todo');
-        }
-
-
-        await this.todoRepository.update(id, { isDeleted: true });
+    if (todo.user.id !== userId) {
+      throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED_TO_UPDATE);
     }
 
+    await this.todoRepo.deleteTodo(id);
+  }
 }

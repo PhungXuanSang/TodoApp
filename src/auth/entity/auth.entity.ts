@@ -1,9 +1,14 @@
-import { User } from "src/users/entity/users.entity";
-import { Column, OneToOne, JoinColumn, PrimaryGeneratedColumn, Entity } from "typeorm";
+import { User } from 'src/users/entity/users.entity';
+import {
+  Column,
+  OneToOne,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+  Entity,
+} from 'typeorm';
 
 @Entity()
 export class Auth {
-
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -13,11 +18,13 @@ export class Auth {
   @Column()
   password: string;
 
+  @Column()
+  fullname: string;
+
   @Column({ default: 'user' })
   role: string;
 
-  @OneToOne(() => User, user => user.auth, { onDelete: 'CASCADE' })
+  @OneToOne(() => User, (user) => user.auth, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
-
 }

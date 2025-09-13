@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -11,29 +11,43 @@ import { TodosModule } from './todos/todos.module';
 import { Todo } from './todos/entity/todo.entity';
 
 @Module({
-   imports: [
-    ConfigModule.forRoot({ 
-        isGlobal: true,
-        envFilePath: process.env.NODE_ENV === 'development' ? '.env.dev' : '.env',
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
     }),
-    TypeOrmModule.forRoot({
+    // DB_HOST=localhost
+    // DB_PORT=5432
+    // DB_TYPE=postgres
+    // DB_PASS=root
+    // DB_NAME=todos
+    //    host: 'localhost',
+    //       port: 5432,
+    //       entities: [User, Auth, Todo],
+    //       username: 'postgres',
+
+    //       password: 'root',
+    //       database: 'todos',
+
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: 'localhost',
-        port: 5432,
-    entities: [User, Auth,Todo], 
-        username: "postgres",
-        password: "root",
-        database: "todos",
-      
-        synchronize: true, 
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USER'),
+        password: configService.get<string>('DB_PASS'),
+        database: configService.get<string>('DB_NAME'),
+        entities: [User, Auth, Todo],
+        synchronize: true, // chỉ dùng khi dev, deploy thì nên false + migration
+      }),
     }),
     AuthModule,
     UsersModule,
     TodosModule,
-    
   ],
   controllers: [AppController],
   providers: [AppService],
-  
 })
 export class AppModule {}

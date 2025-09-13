@@ -1,12 +1,14 @@
-import { IsIn } from "class-validator";
+import { IsNotEmpty, IsString } from 'class-validator';
+import { TodoMessages } from '../constants/todos.messages';
 
 export class TodoDto {
-    
-    title : string;
-    description : string;
-     @IsIn(['pending', 'done'])
-    status : "pending"|"done";
-    dueDate : Date;
-    isDeleted : boolean;
-    userId : number;
+  @IsString()
+  @IsNotEmpty({ message: TodoMessages.TODO_SHOULD_NOT_BE_EMPTY })
+  title: string;
+  @IsString()
+  description: string;
+  status: 'pending' | 'done';
+  dueDate: Date;
+  isDeleted: boolean;
+  userId: number;
 }

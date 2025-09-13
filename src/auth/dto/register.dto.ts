@@ -1,10 +1,23 @@
-import { IsEmail, MinLength } from "class-validator";
+import { IsEmail, IsNotEmpty, Matches, MinLength } from 'class-validator';
+import { AuthMessages } from '../constants/messages';
+import { FULLNAME_REGEX, PASSWORD_REGEX } from '../constants/regex';
 
-export class RegisterDto{
-    @IsEmail()
-    email : string;
-    @MinLength(6)
-    password : string;
-    fullname? : string;
-    role? : string;
+export class RegisterDto {
+  @IsNotEmpty({ message: AuthMessages.EMAIL_SHOULD_NOT_BE_EMPTY })
+  @IsEmail({}, { message: AuthMessages.INVALID_EMAIL_FORMAT })
+  email: string;
+  @IsNotEmpty({ message: AuthMessages.PASSWORD_SHOULD_NOT_BE_EMPTY })
+  @MinLength(6, {
+    message: AuthMessages.PASSWORD_MUST_BE_AT_LEAST_6_CHARACTERS_LONG,
+  })
+  @Matches(PASSWORD_REGEX, {
+    message: AuthMessages.PASSWORD_MUST_CONTAIN,
+  })
+  password: string;
+  @IsNotEmpty({ message: AuthMessages.FULLNAME_NOT_BE_EMPTY })
+  @Matches(FULLNAME_REGEX, {
+    message: AuthMessages.FULLNAME_CAN_ONLY,
+  })
+  fullname: string;
+  role: string;
 }
