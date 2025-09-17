@@ -40,7 +40,8 @@ import { Todo } from './todos/entity/todo.entity';
         password: configService.get<string>('DB_PASS'),
         database: configService.get<string>('DB_NAME'),
         entities: [User, Auth, Todo],
-        synchronize: true, // chỉ dùng khi dev, deploy thì nên false + migration
+        synchronize: true,
+        logging: true,
       }),
     }),
     AuthModule,

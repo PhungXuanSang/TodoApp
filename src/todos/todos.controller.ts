@@ -7,6 +7,8 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { TodoDto } from './dto/todo.dto';
@@ -20,6 +22,7 @@ import { GetUser } from './common/decorators/getUser';
 import { ApiTags } from '@nestjs/swagger';
 import { Roles } from 'src/auth/strategies/roles.Decorator';
 import { RoleGuard } from 'src/auth/strategies/role.guard';
+import { QueryTodoDto } from './dto/QueryTodoDto';
 @ApiTags('auth')
 @Controller(TodoRoutes.TODOS)
 @UseGuards(JwtAuthGuard, RoleGuard)
@@ -32,23 +35,27 @@ export class TodosController {
     return await this.todoService.createTodo(dto, user.userId);
   }
   // @UseGuards(JwtAuthGuard)
-  @UseGuards(JwtAuthGuard, RoleGuard)
+  // @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles('admin')
   @Get(TodoRoutes.GET_ALL)
-  async getAllTodos() {
-    return await this.todoService.findAll();
+  async getAllTodos(@Query() dto: QueryTodoDto) {
+    console.log(dto);
+    return await this.todoService.findAll(dto);
   }
   // @UseGuards(JwtAuthGuard)
   @Get()
-  async getAllTodosNotDelete() {
-    return await this.todoService.findAllNotDelete();
+  async getAllTodosNotDelete(@Query() dto: QueryTodoDto) {
+    return await this.todoService.findAllNotDelete(dto);
   }
   // @UseGuards(JwtAuthGuard)
-  // @Get('user/:userId')
-  // async getallTodosByUserId(@Param('userId', ParseIntPipe) userId: number) {
-  //   //  userId = req.user.userId;
-  //   return this.todoService.findAllByUserId(userId);
-  // }
+  @Roles('admin')
+  @Get(':userId')
+  async getallTodosByUserId(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query() dto: QueryTodoDto,
+  ) {
+    return this.todoService.findAllByUserId(dto, userId);
+  }
   // @UseGuards(JwtAuthGuard)
   @Get(TodoRoutes.ID)
   async getTodoById(@Param('id', ParseIntPipe) id: number) {
@@ -56,12 +63,8 @@ export class TodosController {
   }
   // @UseGuards(JwtAuthGuard)
   @Patch(TodoRoutes.ID)
-  async updateTodo(
-    @Param('id') id: number,
-    @Body() dto: TodoDto,
-    @GetUser() user: UserInfo['user'],
-  ) {
-    return await this.todoService.update(id, dto, user.userId);
+  async updateTodo(@Param('id') id: number, @Body() dto: TodoDto) {
+    return await this.todoService.update(id, dto);
   }
   // @UseGuards(JwtAuthGuard)
   @Delete(TodoRoutes.ID)

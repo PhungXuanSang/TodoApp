@@ -4,6 +4,7 @@ export interface UserInfo {
   user: {
     userId: number;
     email: string;
+    avatar: string;
     role: UserRole;
   };
 }

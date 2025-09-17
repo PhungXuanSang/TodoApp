@@ -8,6 +8,8 @@ import { TodoDto } from './dto/todo.dto';
 import { TodoRepository } from './repository/todo.repository';
 import { UserRepository } from 'src/users/repository/user.repository';
 import { TodoMessages } from './constants/todos.messages';
+import { PaginatedTodo } from './common/interfaces/PaginatedTodo';
+import { QueryTodoDto } from './dto/QueryTodoDto';
 
 @Injectable()
 export class TodosService {
@@ -24,14 +26,20 @@ export class TodosService {
     return this.todoRepo.createTodo(todoDto, user);
   }
   // admin + user
-  async findAllNotDelete(): Promise<Todo[]> {
-    return await this.todoRepo.findAllNotDelete();
+  async findAllNotDelete(todoDto: QueryTodoDto): Promise<PaginatedTodo> {
+    return await this.todoRepo.findAllNotDeleted(todoDto);
   }
   // admin
-  async findAll(): Promise<Todo[]> {
-    return await this.todoRepo.findAll();
+  async findAll(todoDto: QueryTodoDto): Promise<PaginatedTodo> {
+    return await this.todoRepo.findAll(todoDto);
   }
 
+  async findAllByUserId(
+    todoDto: QueryTodoDto,
+    userId: number,
+  ): Promise<PaginatedTodo> {
+    return await this.todoRepo.findAllByUserId(todoDto, userId);
+  }
   // async findAllByUserId(userId: number): Promise<Todo[]> {
   //   return this.todoRepository.find({
   //     where: {
@@ -45,7 +53,7 @@ export class TodosService {
   async findOneById(id: number): Promise<Todo | null> {
     return this.todoRepo.findOneBy({ id });
   }
-  async update(id: number, todoDto: TodoDto, userId: number): Promise<Todo> {
+  async update(id: number, todoDto: TodoDto): Promise<Todo> {
     const todo = await this.todoRepo.findOne({
       where: { id, isDeleted: false },
       relations: ['user'],
@@ -53,7 +61,7 @@ export class TodosService {
     if (!todo) {
       throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
     }
-    if (todo.user.id !== userId) {
+    if (!todo.user.auth.role) {
       throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED_TO_UPDATE);
     }
     return await this.todoRepo.updateTodo(todo, todoDto);

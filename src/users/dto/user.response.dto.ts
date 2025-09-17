@@ -1,18 +1,20 @@
+import { UserRole } from '../entity/user.role';
 import { User } from '../entity/users.entity';
 
 export class UserResponseDto {
   id: number;
   fullname: string;
+  email: string;
   avatar: string;
-  role: string;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
-
-  constructor(user: User) {
-    this.id = user.id;
-    this.avatar = user.avatar;
-    this.createdAt = user.createdAt;
-    this.updatedAt = user.updatedAt;
-    this.role = user.auth.role;
-  }
 }
+// export const toUserResponse = (user: User) => ({
+//   id: user.id,
+//   avatar: user.avatar,
+//   createdAt: user.createdAt,
+//   updatedAt: user.updatedAt,
+//   fullname: user.auth?.fullname,
+//   role: user.auth?.role,
+// });

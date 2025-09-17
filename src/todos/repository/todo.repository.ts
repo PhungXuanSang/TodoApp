@@ -4,20 +4,88 @@ import { TodoDto } from '../dto/todo.dto';
 import { User } from 'src/users/entity/users.entity';
 import { NotFoundException } from '@nestjs/common';
 import { TodoMessages } from '../constants/todos.messages';
+import { PaginatedTodo } from '../common/interfaces/PaginatedTodo';
+import { QueryTodoDto } from '../dto/QueryTodoDto';
 
 export class TodoRepository extends Repository<Todo> {
   constructor(private datasource: DataSource) {
     super(Todo, datasource.createEntityManager());
   }
-  async findAllNotDelete(): Promise<Todo[]> {
-    return await this.find({
-      where: {
-        isDeleted: false,
-      },
-    });
+  async findAllNotDeleted(query: QueryTodoDto): Promise<PaginatedTodo> {
+    const { status, dueDate, page = 1, limit = 10 } = query;
+
+    const qb = this.createQueryBuilder('todo').where('todo.isDeleted = false');
+
+    if (status) {
+      qb.andWhere('todo.status = :status', { status });
+    }
+
+    if (dueDate) {
+      qb.andWhere('todo.dueDate = :dueDate', { dueDate });
+    }
+
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
-  async findAll(): Promise<Todo[]> {
-    return await this.find();
+  async findAllByUserId(
+    query: QueryTodoDto,
+    userId: number,
+  ): Promise<PaginatedTodo> {
+    const { status, dueDate, page = 1, limit = 10 } = query;
+
+    const qb = this.createQueryBuilder('todo')
+      .leftJoinAndSelect('todo.user', 'user')
+      .where('todo.isDeleted = false')
+      .andWhere('todo.userId = :userId', { userId });
+
+    if (status) {
+      qb.andWhere('todo.status = :status', { status });
+    }
+
+    if (dueDate) {
+      qb.andWhere('todo.dueDate = :dueDate', { dueDate });
+    }
+
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+  async findAll(todoDto: QueryTodoDto): Promise<PaginatedTodo> {
+    const { status, dueDate, page, limit } = todoDto;
+    const qb = this.createQueryBuilder('todo');
+    if (status) {
+      qb.andWhere('todo.status = :status', { status });
+    }
+    if (dueDate) {
+      qb.andWhere('todo.dueDate = :dueDate', { dueDate });
+    }
+    qb.skip((page - 1) * limit).take(limit);
+    const [data, total] = await qb.getManyAndCount();
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+    // return await this.find();
   }
   async findOneById(id: number): Promise<Todo | null> {
     return await this.findOneBy({ id });
@@ -25,7 +93,9 @@ export class TodoRepository extends Repository<Todo> {
   async createTodo(todoDto: TodoDto, user: User): Promise<Todo> {
     const todo = this.create({
       title: todoDto.title,
+
       description: todoDto.description || '',
+
       status: 'pending',
       isDeleted: false,
       user,
