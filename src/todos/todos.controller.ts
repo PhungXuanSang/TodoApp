@@ -48,28 +48,44 @@ export class TodosController {
     return await this.todoService.findAllNotDelete(dto);
   }
   // @UseGuards(JwtAuthGuard)
-  @Roles('admin')
-  @Get(':userId')
-  async getallTodosByUserId(
-    @Param('userId', ParseIntPipe) userId: number,
-    @Query() dto: QueryTodoDto,
-  ) {
-    return this.todoService.findAllByUserId(dto, userId);
-  }
+  // @Roles('admin')
+  // @Get(':userId')
+  // async getallTodosByUserId(
+  //   @Param('userId', ParseIntPipe) userId: number,
+  //   @Query() dto: QueryTodoDto,
+  // ) {
+  //   return this.todoService.findAllByUserId(dto, userId);
+  // }
   // @UseGuards(JwtAuthGuard)
-  @Get(TodoRoutes.ID)
-  async getTodoById(@Param('id', ParseIntPipe) id: number) {
-    return await this.todoService.findOneById(id);
-  }
+  // @Get(TodoRoutes.ID)
+  // async getTodoById(@Param('id', ParseIntPipe) id: number) {
+  //   return await this.todoService.findOneById(id);
+  // }
   // @UseGuards(JwtAuthGuard)
   @Patch(TodoRoutes.ID)
-  async updateTodo(@Param('id') id: number, @Body() dto: TodoDto) {
-    return await this.todoService.update(id, dto);
+  async updateTodo(
+    @Param('id') id: number,
+    @Body() dto: TodoDto,
+    @GetUser() user: UserInfo['user'],
+  ) {
+    console.log('current user from @GetUser():', user);
+    console.log('param id:', id);
+    return await this.todoService.update(id, dto, user.userId, user.role);
+  }
+  @Patch(TodoRoutes.STATUS_TODO)
+  async updateStatusTodo(
+    @Param('id') id: number,
+    @Body() dto: TodoDto,
+    @GetUser() user: UserInfo['user'],
+  ) {
+    // console.log('current user from @GetUser():', user);
+    // console.log('param id:', id);
+    return await this.todoService.updateStatus(id, dto, user.userId, user.role);
   }
   // @UseGuards(JwtAuthGuard)
   @Delete(TodoRoutes.ID)
   async deleteTodo(@Param('id') id: number, @GetUser() user: UserInfo['user']) {
-    await this.todoService.remove(id, user.userId);
+    await this.todoService.remove(id, user.userId, user.role);
     return { message: TodoMessages.TODO_DELETED_SUCC };
   }
 }

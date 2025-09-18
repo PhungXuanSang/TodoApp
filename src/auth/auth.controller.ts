@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -6,6 +13,9 @@ import { AuthMessages } from './constants/messages';
 import { AuthRoutes } from './constants/routes';
 import { ResponseDto } from './dto/response.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { AuthUser } from './common/authUser';
+import { LocalStrategy } from './strategies/local.strategy';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -31,14 +41,17 @@ export class AuthController {
       data: response,
     };
   }
-
+  @UseGuards(AuthGuard('local'))
   @Post(AuthRoutes.LOGIN)
   @HttpCode(200)
-  async login(@Body() dto: LoginDto) {
-    const token = await this.authService.login(dto);
-    return {
-      token,
-      message: AuthMessages.LOGIN_SUCCESS,
-    };
+  login(@Request() req: { user: AuthUser }) {
+    return this.authService.login(req.user);
   }
+  // async login(@Body() dto: LoginDto) {
+  //   const token = await this.authService.login(dto);
+  //   return {
+  //     token,
+  //     message: AuthMessages.LOGIN_SUCCESS,
+  //   };
+  // }
 }

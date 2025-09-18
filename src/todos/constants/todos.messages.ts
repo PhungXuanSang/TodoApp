@@ -5,4 +5,6 @@ export const TodoMessages = {
   TODO_DELETED_SUCC: 'Todo deleted successfully',
   TODO_SHOULD_NOT_BE_EMPTY: 'Todo should not be empty',
   USER_NOT_FOUND: 'User not found',
+  THE_STATUS_IS_INDICATED: 'The status is indicated as pending or done',
+  NOT_AUTHORIZED: 'You are not authorized',
 };

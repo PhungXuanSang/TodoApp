@@ -9,6 +9,7 @@ import { jwtStrategy } from './strategies/Jwt.strategy';
 import { AuthRepository } from './repository/auth.repository';
 import { DataSource } from 'typeorm';
 import { UserRepository } from 'src/users/repository/user.repository';
+import { LocalStrategy } from './strategies/local.strategy';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UserRepository } from 'src/users/repository/user.repository';
   providers: [
     AuthService,
     jwtStrategy,
+    LocalStrategy,
     {
       provide: AuthRepository,
       useFactory: (dataSource: DataSource) => new AuthRepository(dataSource),

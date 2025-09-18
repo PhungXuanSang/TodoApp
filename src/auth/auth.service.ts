@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -12,19 +13,26 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthRepository } from './repository/auth.repository';
 import { UserRepository } from 'src/users/repository/user.repository';
 import { AuthMessages } from './constants/messages';
+import { AuthUser } from './common/authUser';
 
 @Injectable()
 export class AuthService {
-  async validateUser(email: string, password: string): Promise<Auth | null> {
-    const user = await this.authRepo.findOne({
-      where: { email },
-    });
+  async validateUser(email: string, pass: string) {
+    const user = await this.authRepo.findByEmail(email);
+    // const user = await this.authRepo.findOne({
+    //   where: { email },
+    // });
     if (!user) return null;
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(pass, user.password);
     if (!isPasswordValid) return null;
 
-    return user;
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullname,
+      role: user.role,
+    };
   }
   constructor(
     private readonly authRepo: AuthRepository,
@@ -56,20 +64,20 @@ export class AuthService {
     };
   }
   //
-  async login(dto: LoginDto) {
-    const auth = await this.authRepo.findByEmail(dto.email);
-    if (!auth) {
-      throw new NotFoundException(AuthMessages.INVALID_CREDENTIALS);
-    }
+  login(user: AuthUser) {
+    // const auth = await this.authRepo.findByEmail(dto.email);
+    // if (!auth) {
+    //   throw new UnauthorizedException(AuthMessages.INVALID_CREDENTIALS);
+    // }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, auth.password);
-    if (!isPasswordValid) {
-      throw new NotFoundException(AuthMessages.INVALID_CREDENTIALS);
-    }
-    const payload = { sub: auth.id, email: auth.email, role: auth.role };
+    // const isPasswordValid = await bcrypt.compare(dto.password, auth.password);
+    // if (!isPasswordValid) {
+    //   throw new UnauthorizedException(AuthMessages.INVALID_CREDENTIALS);
+    // }
+    const payload = { sub: user.id, email: user.email, role: user.role };
 
     const refreshToken = this.jwtService.sign(
-      { sub: auth.id },
+      { sub: user.id },
       {
         secret: process.env.JWT_REFRESH_SECRET,
         expiresIn: process.env.JWT_REFRESH_EXPIRES,
@@ -82,6 +90,6 @@ export class AuthService {
     });
     console.log(payload);
 
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, message: AuthMessages.LOGIN_SUCCESS };
   }
 }

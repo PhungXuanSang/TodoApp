@@ -1,5 +1,6 @@
 import {
   IsDateString,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -14,6 +15,7 @@ export class TodoDto {
   @IsString()
   description: string;
   @IsOptional()
+  @IsIn(['pending', 'done'], { message: TodoMessages.THE_STATUS_IS_INDICATED })
   status: 'pending' | 'done';
   @IsOptional()
   @IsDateString()

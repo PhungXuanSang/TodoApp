@@ -10,6 +10,8 @@ import { UserRepository } from 'src/users/repository/user.repository';
 import { TodoMessages } from './constants/todos.messages';
 import { PaginatedTodo } from './common/interfaces/PaginatedTodo';
 import { QueryTodoDto } from './dto/QueryTodoDto';
+import { UpdateStatusDto } from './dto/todo.updatedStatusDto';
+import { UserRole } from 'src/users/entity/user.role';
 
 @Injectable()
 export class TodosService {
@@ -40,47 +42,62 @@ export class TodosService {
   ): Promise<PaginatedTodo> {
     return await this.todoRepo.findAllByUserId(todoDto, userId);
   }
-  // async findAllByUserId(userId: number): Promise<Todo[]> {
-  //   return this.todoRepository.find({
-  //     where: {
-  //       user: { id: userId },
-  //       isDeleted: false,
-  //     },
-  //     // relations : ['user']
-  //   });
-  // }
   // admin+ user
   async findOneById(id: number): Promise<Todo | null> {
     return this.todoRepo.findOneBy({ id });
   }
-  async update(id: number, todoDto: TodoDto): Promise<Todo> {
-    const todo = await this.todoRepo.findOne({
-      where: { id, isDeleted: false },
-      relations: ['user'],
-    });
-    if (!todo) {
-      throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
-    }
-    if (!todo.user.auth.role) {
-      throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED_TO_UPDATE);
-    }
+  async update(
+    id: number,
+    todoDto: TodoDto,
+    userId: number,
+    role: UserRole,
+  ): Promise<Todo> {
+    const todo = await this.getCheckTodoOrFail(id, userId, role);
     return await this.todoRepo.updateTodo(todo, todoDto);
   }
-  async remove(id: number, userId: number): Promise<void> {
-    const todo = await this.todoRepo.findOne({
-      where: { id, isDeleted: false },
-      relations: ['user'],
-    });
-    if (!todo) {
-      throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
-    }
+  async updateStatus(
+    id: number,
+    todoDto: UpdateStatusDto,
+    userId: number,
+    role: UserRole,
+  ): Promise<Todo> {
+    const todo = await this.getCheckTodoOrFail(id, userId, role);
+    return await this.todoRepo.updateStatusTodo(todo, todoDto);
+  }
+  async remove(id: number, userId: number, role: UserRole): Promise<void> {
+    const todo = await this.getCheckTodoOrFail(id, userId, role);
     if (todo.isDeleted) {
       throw new NotFoundException(TodoMessages.TODO_ALREADY_DELETED);
     }
-    if (todo.user.id !== userId) {
-      throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED_TO_UPDATE);
-    }
 
     await this.todoRepo.deleteTodo(id);
+  }
+  private async getCheckTodoOrFail(id: number, userId: number, role: UserRole) {
+    const todo = await this.todoRepo.findOne({
+      where: { id, isDeleted: false },
+      relations: ['user', 'user.auth'],
+    });
+
+    if (!todo) {
+      throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
+    }
+    console.log('role:adminnnnnnnnnnnnnnnnnnn78' + todo.user.auth.role);
+    console.log('role:' + todo.user.id + 'userId' + userId);
+    // if (todo.user.auth.role !== 'admin') {
+
+    // }
+    // if (todo.user.id !== userId) {
+    //   throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED);
+    // }
+    // if (todo.user.id !== userId && todo.user.auth.role !== 'admin') {
+    //   throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED);
+    // }
+    if (role !== UserRole.ADMIN) {
+      if (todo.user.id !== userId) {
+        throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED);
+      }
+    }
+
+    return todo;
   }
 }

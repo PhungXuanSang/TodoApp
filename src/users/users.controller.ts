@@ -26,17 +26,19 @@ import { join } from 'path';
 @ApiTags('user')
 @Controller('user')
 @UseGuards(JwtAuthGuard, RoleGuard)
-@Roles('admin')
+// @Roles('admin')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
   // @Post()
   // async createUser(@Body() createUserDto: CreateUserDto) {
   //   return this.usersService.createUser(createUserDto);
   // }
+  @Roles('admin')
   @Get()
   async findAll() {
     return await this.usersService.findAll();
   }
+  @Roles('admin')
   @Get(':id')
   async findOne(@Param('id') id: number) {
     return this.usersService.findOne(id);
@@ -45,11 +47,13 @@ export class UsersController {
   // async update(@Param('id') id: number, @Body() userDto: UserDto) {
   //   return this.usersService.update(id, userDto);
   // }
+  @Roles('admin')
   @Delete(':id')
   async remove(@Param('id') id: number) {
     await this.usersService.remove(id);
     return { message: 'User deleted successfully' };
   }
+
   @Patch('avatar')
   @UseInterceptors(FileInterceptor('avatar', multerConfig))
   async updateAvatar(
