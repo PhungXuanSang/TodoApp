@@ -7,6 +7,7 @@ import { UserRepository } from './repository/user.repository';
 import { UserDto } from './dto/user.dto';
 import { UserResponseDto } from './dto/user.response.dto';
 import { UserRole } from './entity/user.role';
+import { UserMessages } from './constants/user.messages';
 @Injectable()
 export class UsersService {
   constructor(private readonly userRepo: UserRepository) {}
@@ -47,10 +48,10 @@ export class UsersService {
   async update(userId: number, userDto: UserDto): Promise<UserDto> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) {
-      throw new NotFoundException('User not Found');
+      throw new NotFoundException(UserMessages.USER_NOT_FOUND);
     }
     if (user.id == 1) {
-      throw new ForbiddenException('not del admin');
+      throw new ForbiddenException(UserMessages.USER_NOT_FOUND);
     }
 
     return await this.userRepo.updateUser(user, userDto);
@@ -65,7 +66,7 @@ export class UsersService {
       relations: ['auth'],
     });
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException(UserMessages.USER_NOT_FOUND);
     console.log(user.auth.role + 'role');
     if (user.auth.role == 'admin') {
       const idToUpdate = user.id;
@@ -76,6 +77,6 @@ export class UsersService {
       return await this.userRepo.updateAvatar(userId, file.filename);
     }
 
-    throw new ForbiddenException('You are not allowed to update avatar');
+    throw new ForbiddenException(UserMessages.YOU_ALLOWED_TO_UPDATE_AVATAR);
   }
 }

@@ -66,38 +66,23 @@ export class TodosService {
   }
   async remove(id: number, userId: number, role: UserRole): Promise<void> {
     const todo = await this.getCheckTodoOrFail(id, userId, role);
-    if (todo.isDeleted) {
-      throw new NotFoundException(TodoMessages.TODO_ALREADY_DELETED);
-    }
-
-    await this.todoRepo.deleteTodo(id);
+    todo.isDeleted = true;
+    await this.todoRepo.saveTodo(todo);
   }
   private async getCheckTodoOrFail(id: number, userId: number, role: UserRole) {
-    const todo = await this.todoRepo.findOne({
-      where: { id, isDeleted: false },
-      relations: ['user', 'user.auth'],
-    });
+    const todo = await this.todoRepo.findById(id);
 
     if (!todo) {
       throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
     }
-    console.log('role:adminnnnnnnnnnnnnnnnnnn78' + todo.user.auth.role);
-    console.log('role:' + todo.user.id + 'userId' + userId);
-    // if (todo.user.auth.role !== 'admin') {
-
-    // }
-    // if (todo.user.id !== userId) {
-    //   throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED);
-    // }
-    // if (todo.user.id !== userId && todo.user.auth.role !== 'admin') {
-    //   throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED);
-    // }
     if (role !== UserRole.ADMIN) {
       if (todo.user.id !== userId) {
         throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED);
       }
     }
-
+    if (todo.isDeleted) {
+      throw new NotFoundException(TodoMessages.TODO_ALREADY_DELETED);
+    }
     return todo;
   }
 }

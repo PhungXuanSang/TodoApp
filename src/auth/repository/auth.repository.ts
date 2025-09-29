@@ -21,4 +21,7 @@ export class AuthRepository extends Repository<Auth> {
     });
     return await this.save(newAuth);
   }
+  async findById(id: number): Promise<Auth | null> {
+    return await this.findOne({ where: { id }, relations: ['user'] });
+  }
 }

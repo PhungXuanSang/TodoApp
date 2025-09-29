@@ -1,4 +1,4 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { Todo } from '../entity/todo.entity';
 import { TodoDto } from '../dto/todo.dto';
 import { User } from 'src/users/entity/users.entity';
@@ -14,6 +14,7 @@ export class TodoRepository extends Repository<Todo> {
   }
   async findAllNotDeleted(query: QueryTodoDto): Promise<PaginatedTodo> {
     const { status, dueDate, page = 1, limit = 10 } = query;
+    // const checkTodo = this.findAll
 
     const qb = this.createQueryBuilder('todo')
       .where('todo.isDeleted = false')
@@ -28,10 +29,6 @@ export class TodoRepository extends Repository<Todo> {
       startDay.setHours(0, 0, 0, 0);
       const endDay = new Date(dueDate);
       endDay.setHours(24, 59, 59, 999);
-
-      console.log('dueDate param:', dueDate);
-      console.log('startOfDay:', startDay.toISOString());
-      console.log('endOfDay:', endDay.toISOString());
       qb.andWhere('todo.dueDate BETWEEN :start AND :end', {
         start: startDay.toISOString(),
         end: endDay.toISOString(),
@@ -63,26 +60,23 @@ export class TodoRepository extends Repository<Todo> {
       .where('todo.isDeleted = false')
       .andWhere('todo.userId = :userId', { userId });
 
-    if (status) {
-      qb.andWhere('todo.status = :status', { status });
-    }
+    this.applyFilters(qb, query);
+    // if (status) {
+    //   qb.andWhere('todo.status = :status', { status });
+    // }
 
-    if (dueDate) {
-      const startDay = new Date(dueDate);
-      startDay.setHours(0, 0, 0, 0);
-      const endDay = new Date(dueDate);
-      endDay.setHours(24, 59, 59, 999);
-
-      console.log('dueDate param:', dueDate);
-      console.log('startOfDay:', startDay.toISOString());
-      console.log('endOfDay:', endDay.toISOString());
-      qb.andWhere('todo.dueDate BETWEEN :start AND :end', {
-        start: startDay.toISOString(),
-        end: endDay.toISOString(),
-        // startDay,
-        // endDay,
-      });
-    }
+    // if (dueDate) {
+    //   const startDay = new Date(dueDate);
+    //   startDay.setHours(0, 0, 0, 0);
+    //   const endDay = new Date(dueDate);
+    //   endDay.setHours(24, 59, 59, 999);
+    //   qb.andWhere('todo.dueDate BETWEEN :start AND :end', {
+    //     start: startDay.toISOString(),
+    //     end: endDay.toISOString(),
+    //     // startDay,
+    //     // endDay,
+    //   });
+    // }
 
     qb.skip((page - 1) * limit).take(limit);
 
@@ -96,12 +90,9 @@ export class TodoRepository extends Repository<Todo> {
       totalPages: Math.ceil(total / limit),
     };
   }
-  async findAll(todoDto: QueryTodoDto): Promise<PaginatedTodo> {
-    const { status, dueDate, page, limit } = todoDto;
-    const qb = this.createQueryBuilder('todo').leftJoinAndSelect(
-      'todo.user',
-      'user',
-    );
+  private applyFilters(qb: SelectQueryBuilder<Todo>, query: QueryTodoDto) {
+    const { status, dueDate } = query;
+
     if (status) {
       qb.andWhere('todo.status = :status', { status });
     }
@@ -110,18 +101,21 @@ export class TodoRepository extends Repository<Todo> {
       const startDay = new Date(dueDate);
       startDay.setHours(0, 0, 0, 0);
       const endDay = new Date(dueDate);
-      endDay.setHours(24, 59, 59, 999);
+      endDay.setHours(23, 59, 59, 999);
 
-      console.log('dueDate param:', dueDate);
-      console.log('startOfDay:', startDay.toISOString());
-      console.log('endOfDay:', endDay.toISOString());
       qb.andWhere('todo.dueDate BETWEEN :start AND :end', {
         start: startDay.toISOString(),
         end: endDay.toISOString(),
-        // startDay,
-        // endDay,
       });
     }
+  }
+  async findAll(todoDto: QueryTodoDto): Promise<PaginatedTodo> {
+    const { page, limit } = todoDto;
+    const qb = this.createQueryBuilder('todo').leftJoinAndSelect(
+      'todo.user',
+      'user',
+    );
+    this.applyFilters(qb, todoDto);
     qb.skip((page - 1) * limit).take(limit);
     const [data, total] = await qb.getManyAndCount();
     return {
@@ -160,28 +154,21 @@ export class TodoRepository extends Repository<Todo> {
     return await this.save(todo);
   }
 
-  async deleteTodo(id: number): Promise<Todo> {
-    const todo = await this.findOne({ where: { id } });
-    if (!todo) {
-      throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
-    }
-    todo.isDeleted = true;
-    return this.save(todo);
-  }
-  // async getCheckTodoOrFail(id: number, userId: number) {
-  //   const todo = await this.findOne({
-  //     where: { id, isDeleted: false },
-  //     relations: ['user', 'user.auth'],
-  //   });
-
+  // async deleteTodo(id: number): Promise<Todo> {
+  //   const todo = await this.findOne({ where: { id } });
   //   if (!todo) {
   //     throw new NotFoundException(TodoMessages.TODO_NOT_FOUND);
   //   }
-
-  //   if (todo.user.id !== userId && todo.user.auth.role !== 'admin') {
-  //     throw new ForbiddenException(TodoMessages.NOT_AUTHORIZED);
-  //   }
-
-  //   return todo;
+  //   todo.isDeleted = true;
+  //   return this.save(todo);
   // }
+  async findById(id: number): Promise<Todo | null> {
+    return await this.findOne({
+      where: { id, isDeleted: false },
+      relations: ['user'],
+    });
+  }
+  async saveTodo(todo: Todo): Promise<Todo> {
+    return await this.save(todo);
+  }
 }

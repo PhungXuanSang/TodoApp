@@ -6,21 +6,17 @@ import {
   Param,
   Patch,
   UseGuards,
-  Put,
   UseInterceptors,
-  Req,
   UploadedFile,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
 import { RoleGuard } from 'src/auth/strategies/role.guard';
 import { Roles } from 'src/auth/strategies/roles.Decorator';
-import { UserDto } from './dto/user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { GetUser } from 'src/todos/common/decorators/getUser';
 import { multerConfig } from 'src/config/multer.config';
-import { UserInfo } from 'src/todos/common/interfaces/userInfo';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 @ApiTags('user')
@@ -35,11 +31,13 @@ export class UsersController {
   // }
   @Roles('admin')
   @Get()
+  @ApiOperation({ summary: 'Hiển thị danh sách user' })
   async findAll() {
     return await this.usersService.findAll();
   }
   @Roles('admin')
   @Get(':id')
+  @ApiOperation({ summary: 'Hiển thị 1 user' })
   async findOne(@Param('id') id: number) {
     return this.usersService.findOne(id);
   }
@@ -49,12 +47,14 @@ export class UsersController {
   // }
   @Roles('admin')
   @Delete(':id')
+  @ApiOperation({ summary: 'Xóa user' })
   async remove(@Param('id') id: number) {
     await this.usersService.remove(id);
     return { message: 'User deleted successfully' };
   }
 
   @Patch('avatar')
+  @ApiOperation({ summary: 'upload avatar' })
   @UseInterceptors(FileInterceptor('avatar', multerConfig))
   async updateAvatar(
     @UploadedFile() file: Express.Multer.File,

@@ -4,32 +4,30 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { TodoDto } from './dto/todo.dto';
 import { TodosService } from './todos.service';
 import { JwtAuthGuard } from 'src/auth/strategies/jwt.guard';
-import { Request } from 'express';
 import { UserInfo } from './common/interfaces/userInfo';
 import { TodoMessages } from './constants/todos.messages';
 import { TodoRoutes } from './constants/todo.routes';
 import { GetUser } from './common/decorators/getUser';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from 'src/auth/strategies/roles.Decorator';
 import { RoleGuard } from 'src/auth/strategies/role.guard';
 import { QueryTodoDto } from './dto/QueryTodoDto';
-@ApiTags('auth')
+@ApiTags('todo')
 @Controller(TodoRoutes.TODOS)
 @UseGuards(JwtAuthGuard, RoleGuard)
 export class TodosController {
   constructor(private readonly todoService: TodosService) {}
 
   // @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Thêm todo' })
   @Post()
   async createTodo(@Body() dto: TodoDto, @GetUser() user: UserInfo['user']) {
     return await this.todoService.createTodo(dto, user.userId);
@@ -37,6 +35,7 @@ export class TodosController {
   // @UseGuards(JwtAuthGuard)
   // @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles('admin')
+  @ApiOperation({ summary: 'Hiển thị danh sách all todo kể cả đã xóa' })
   @Get(TodoRoutes.GET_ALL)
   async getAllTodos(@Query() dto: QueryTodoDto) {
     console.log(dto);
@@ -44,6 +43,7 @@ export class TodosController {
   }
   // @UseGuards(JwtAuthGuard)
   @Get()
+  @ApiOperation({ summary: 'Hiển thị danh sách all todo chưa xóa' })
   async getAllTodosNotDelete(@Query() dto: QueryTodoDto) {
     return await this.todoService.findAllNotDelete(dto);
   }
@@ -63,6 +63,7 @@ export class TodosController {
   // }
   // @UseGuards(JwtAuthGuard)
   @Patch(TodoRoutes.ID)
+  @ApiOperation({ summary: 'Sửa todo' })
   async updateTodo(
     @Param('id') id: number,
     @Body() dto: TodoDto,
@@ -73,6 +74,7 @@ export class TodosController {
     return await this.todoService.update(id, dto, user.userId, user.role);
   }
   @Patch(TodoRoutes.STATUS_TODO)
+  @ApiOperation({ summary: 'Upload trạng thái todo' })
   async updateStatusTodo(
     @Param('id') id: number,
     @Body() dto: TodoDto,
@@ -84,6 +86,7 @@ export class TodosController {
   }
   // @UseGuards(JwtAuthGuard)
   @Delete(TodoRoutes.ID)
+  @ApiOperation({ summary: 'xóa todo' })
   async deleteTodo(@Param('id') id: number, @GetUser() user: UserInfo['user']) {
     await this.todoService.remove(id, user.userId, user.role);
     return { message: TodoMessages.TODO_DELETED_SUCC };

@@ -22,11 +22,11 @@ services:
     depends_on:
       - postgres
     environment:
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: root
-      DATABASE_NAME: todos
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASS: root
+      DB_NAME: todos
       JWT_SECRET: your_jwt_secret
 
 volumes:

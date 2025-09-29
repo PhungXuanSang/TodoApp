@@ -31,7 +31,7 @@ async function runSeed() {
 
   const superAdminUser = userRepo.create({
     auth: superAdmin,
-    avatar: 'https://example.com/default-avatar.png',
+    avatar: MessagesAdmin.AVATAR,
   });
   await userRepo.save(superAdminUser);
   console.log('Super admin saved!');

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserDto } from '../dto/user.dto';
+import { TodoMessages } from 'src/todos/constants/todos.messages';
 @Injectable()
 export class UserRepository extends Repository<User> {
   constructor(private datasource: DataSource) {
@@ -30,6 +31,11 @@ export class UserRepository extends Repository<User> {
       relations: ['auth'],
     });
   }
+  // async findOne(id: number) {
+  //   return await this.findOne({
+  //     where: { id, isDeleted: false },
+  //   });
+  // }
   async updateUser(user: User, userDto: UserDto): Promise<User> {
     Object.assign(user, userDto);
     return await this.save(user);

@@ -1,12 +1,9 @@
 import {
   ConflictException,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { Auth } from 'typeorm';
 
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
@@ -14,6 +11,7 @@ import { AuthRepository } from './repository/auth.repository';
 import { UserRepository } from 'src/users/repository/user.repository';
 import { AuthMessages } from './constants/messages';
 import { AuthUser } from './common/authUser';
+import { RefreshTokenPayload } from './common/RefreshTokenPayload';
 
 @Injectable()
 export class AuthService {
@@ -91,5 +89,40 @@ export class AuthService {
     console.log(payload);
 
     return { accessToken, refreshToken, message: AuthMessages.LOGIN_SUCCESS };
+  }
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = this.jwtService.verify<RefreshTokenPayload>(
+        refreshToken,
+        {
+          secret: process.env.JWT_REFRESH_SECRET,
+        },
+      );
+
+      // Tìm user từ DB theo userId trong refreshToken
+      const user = await this.authRepo.findById(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException();
+      }
+
+      // (Nếu bạn lưu refreshToken trong DB thì check thêm ở đây)
+      // if (user.refreshToken !== refreshToken) {
+      //   throw new UnauthorizedException('Invalid refresh token');
+      // }
+
+      // Tạo accessToken mới
+      const newAccessToken = this.jwtService.sign(
+        { sub: user.id, email: user.email, role: user.role },
+        {
+          secret: process.env.JWT_SECRET,
+          expiresIn: process.env.JWT_ACCESS_EXPIRES,
+        },
+      );
+
+      return { accessToken: newAccessToken };
+    } catch (error) {
+      console.log(error);
+      throw new UnauthorizedException('Refresh token invalid or expired');
+    }
   }
 }

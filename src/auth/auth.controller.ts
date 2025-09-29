@@ -8,20 +8,19 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
 import { AuthMessages } from './constants/messages';
 import { AuthRoutes } from './constants/routes';
 import { ResponseDto } from './dto/response.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthUser } from './common/authUser';
-import { LocalStrategy } from './strategies/local.strategy';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
   @Post(AuthRoutes.REGISTER)
   @HttpCode(201)
+  @ApiOperation({ summary: 'Đăng ký' })
   async register(@Body() dto: RegisterDto) {
     const reg = await this.authService.register(dto);
     const { ...authSafe } = reg.auth;
@@ -44,6 +43,7 @@ export class AuthController {
   @UseGuards(AuthGuard('local'))
   @Post(AuthRoutes.LOGIN)
   @HttpCode(200)
+  @ApiOperation({ summary: 'Đăng Nhập' })
   login(@Request() req: { user: AuthUser }) {
     return this.authService.login(req.user);
   }
@@ -54,4 +54,9 @@ export class AuthController {
   //     message: AuthMessages.LOGIN_SUCCESS,
   //   };
   // }
+  @Post('refresh')
+  @ApiOperation({ summary: 'lấy lại accessToken' })
+  async refresh(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refreshToken(refreshToken);
+  }
 }
